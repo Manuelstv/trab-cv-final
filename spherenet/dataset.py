@@ -15,6 +15,7 @@ from torchvision import datasets
 # Misc
 from functools import lru_cache
 import cv2
+from matplotlib import pyplot as plt 
 
 
 def genuv(h, w):
@@ -72,6 +73,18 @@ def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=0):
 
     invalid = (u < -u_fov / 2) | (u > u_fov / 2) |\
               (v < -v_fov / 2) | (v > v_fov / 2)
+
+    '''
+    if (u < -u_fov / 2):
+        x = 0
+    if (u > u_fov / 2):
+        x = 256
+    if (v < -v_fov / 2):
+        y = 0
+    if (v > v_fov / 2):
+        y =256
+    '''
+
     x[invalid] = -100
     y[invalid] = -100
 
@@ -123,7 +136,14 @@ class OmniDataset(data.Dataset):
             img_idx = uv2img_idx(uv, h, w, fov, fov, v_c)
         else:
             img_idx = uv2img_idx(uv, h, w, fov, fov, 0)
+        
+        print(len(np.unique(img_idx[0])))
         x = map_coordinates(img, img_idx, order=1)
+
+        #plt.imshow(img_idx[0])
+        #plt.show()
+        
+
 
         #print(img_idx)
         #print(img_idx.shape) 
@@ -151,6 +171,8 @@ class OmniDataset(data.Dataset):
             x = x - self.img_mean
         if self.img_std is not None:
             x = x / self.img_std
+
+
 
         return torch.FloatTensor(x.copy()), self.dataset[idx][1]
 
