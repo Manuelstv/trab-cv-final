@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 
-path = r'/home/msnuel/trab-final-cv/animals/zebra2/007.jpg'
+path = r'/home/msnuel/trab-final-cv/animals/train/image_0.jpg'
 
 # Reading an image in default mode
 image = cv2.imread(path)
@@ -28,18 +28,18 @@ img_height = image.shape[0]
 
 #df = pd.DataFrame()
 
-df = pd.read_csv(r'/home/msnuel/trab-final-cv/animals/zebra2/007.txt', sep =' ', header=None)
+df = pd.read_csv(r'/home/msnuel/trab-final-cv/animals/train/image_0.txt', sep =' ', header=None)
 
 df.columns = ['class','x', 'y','h','w']
 
 new_df = pd.DataFrame()
 new_df['class'] = df['class']
 
-new_df['a'] = (df['x'])#*img_width
-new_df['b'] = (df['y'])#*img_height
+new_df['a'] = (df['x'])*256 #*img_width
+new_df['b'] = (df['y'])*256     #*img_height
 
-new_df['c'] = df['h']#+df['w']/2)*img_width
-new_df['d'] = df['w']#+df['h']/2)*img_height
+new_df['c'] = df['h']*256 #+df['w']/2)*img_width
+new_df['d'] = df['w']*256 #+df['h']/2)*img_height
 
 #print(new_df)
 #new_df = new_df.reset_index()

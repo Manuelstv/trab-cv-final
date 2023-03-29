@@ -19,8 +19,10 @@ import cv2
 
 def genuv(h, w):
     u, v = np.meshgrid(np.arange(w), np.arange(h))
+
     u = (u + 0.5) * 2 * np.pi / w - np.pi
     v = (v + 0.5) * np.pi / h - np.pi / 2
+
     return np.stack([u, v], axis=-1)
 
 
@@ -76,7 +78,7 @@ def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=0):
     return np.stack([y, x], axis=0)
 
 class OmniDataset(data.Dataset):
-    def __init__(self, dataset, fov=120, outshape=(256, 256),
+    def __init__(self, dataset, fov=180, outshape=(256, 256),
                  flip=False, h_rotate=False, v_rotate=False,
                  img_mean=None, img_std=None, fix_aug=False):
         '''
@@ -108,7 +110,7 @@ class OmniDataset(data.Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        img = np.array(self.dataset[idx][0], np.float32)#/255.
+        img = np.array(self.dataset[idx][0], np.float32)
         h, w = img.shape[:2]
         uv = genuv(*self.outshape)
         fov = self.fov * np.pi / 180
@@ -122,6 +124,12 @@ class OmniDataset(data.Dataset):
         else:
             img_idx = uv2img_idx(uv, h, w, fov, fov, 0)
         x = map_coordinates(img, img_idx, order=1)
+
+        #print(img_idx)
+        #print(img_idx.shape) 
+
+        #print(map_coordinates(np.array([1,1]), img_idx, order=1))
+        #asdsj = map_coordinates(np.array([[0.1, 0.2], [0.3, 0.4]]), np.array([[0.12, 0.2], [0.23, 0.4]]), order=1)
 
         # Random flip
         if self.aug is not None:
@@ -159,7 +167,7 @@ class CustomDataset(data.Dataset):
         #self.idx = idx
         self.root_dir = root_dir
         self.transform = transform
-        self.classes = ['pandas','bears']
+        #self.classes = ['pandas','bears']
 
     def __len__(self):
         return len(glob.glob(f'{self.root_dir}/*.jpg'))
@@ -232,22 +240,22 @@ class CustomDataset(data.Dataset):
         f = open(annot_filename,"r")
         #next(f)
         #labels, x, y, w, h = f.read().split(',')
-        labels, x, y, w, h = f.read().split()
+        labels, x_min, y_min, x_max, y_max = f.read().split()
         
         labels = torch.as_tensor(int(labels), dtype=torch.float32)
-        x = torch.as_tensor(float(x)/300, dtype=torch.float32)
-        y = torch.as_tensor(float(y)/300, dtype=torch.float32)
-        w = torch.as_tensor(float(w)/300, dtype=torch.float32)
-        h = torch.as_tensor(float(h)/300, dtype=torch.float32)
+        x_min = torch.as_tensor(float(x_min), dtype=torch.float32)
+        y_min = torch.as_tensor(float(y_min), dtype=torch.float32)
+        x_max = torch.as_tensor(float(x_max), dtype=torch.float32)
+        y_max = torch.as_tensor(float(y_max), dtype=torch.float32)
 
         # prepare the final `target` dictionary
         target = {}
         #target["boxes"] = boxes
         target["labels"] = labels
-        target["x"] = x
-        target["y"] = y
-        target["w"] = w
-        target["h"] = w
+        target["x_min"] = x_min
+        target["y_min"] = y_min
+        target["x_max"] = x_max 
+        target["y_max"] = y_max
         #target["area"] = area
         #target["iscrowd"] = iscrowd
         #image_id = torch.tensor([idx])
@@ -256,7 +264,7 @@ class CustomDataset(data.Dataset):
         return image, target
 
 class OmniCustom(OmniDataset):
-    def __init__(self, root = '/home/msnuel/trab-final-cv/mnist/train', train=True,
+    def __init__(self, root = '/home/msnuel/trab-final-cv/animals/train', train=True,
                  download=True, *args, **kwargs):
         
         self.custom = CustomDataset(root_dir = root)
@@ -304,7 +312,7 @@ if __name__ == '__main__':
                         choices=['OmniMNIST', 'OmniFashionMNIST', 'OmniCustom'],
                         help='which dataset to use')
 
-    parser.add_argument('--fov', type=int, default=120,
+    parser.add_argument('--fov', type=int, default=80,
                         help='fov of the tangent plane')
     parser.add_argument('--flip', action='store_true',
                         help='whether to apply random flip')
