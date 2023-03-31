@@ -76,13 +76,12 @@ def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=0):
 
     x[invalid] = -100
     y[invalid] = -100
-    print(x,y)
 
 
     return np.stack([y, x], axis=0)
 
 class OmniDataset(data.Dataset):
-    def __init__(self, dataset, fov=120, outshape=(1024,1024),
+    def __init__(self, dataset, fov=120, outshape=(256, 256),
                  flip=False, h_rotate=False, v_rotate=False,
                  img_mean=None, img_std=None, fix_aug=False):
         '''
@@ -115,10 +114,6 @@ class OmniDataset(data.Dataset):
 
     def __getitem__(self, idx):
         img = np.array(self.dataset[idx][0], np.float32)
-        img[1,1] = -1000
-        img[1,2] = -1000
-        img[1,3] = -1000
-        img[251, 242] = -1000
 
         h, w = img.shape[:2]
         fov = self.fov * np.pi / 180
@@ -134,21 +129,16 @@ class OmniDataset(data.Dataset):
         else:
             img_idx = uv2img_idx(uv, h, w, fov, fov, 0)
             #print(img_idx.shape)
-            cv2.imwrite('teste.jpg', img_idx[1])
-        
+                   
         
         x = map_coordinates(img, img_idx, order=1)
 
-        #print(map_coordinates(np.array([1,1]), img_idx, order=1))
-        #asdsj = map_coordinates(np.array([[0.1, 0.2], [0.3, 0.4]]), np.array([[0.12, 0.2], [0.23, 0.4]]), order=1)
-
         # Random flip
-        '''if self.aug is not None:
+        if self.aug is not None:
             if self.aug[idx]['flip']:
                 x = np.flip(x, axis=1)
         elif self.flip and np.random.randint(2) == 0:
             x = np.flip(x, axis=1)
-
         # Random horizontal rotate
         if self.h_rotate:
             if self.aug is not None:
@@ -156,13 +146,11 @@ class OmniDataset(data.Dataset):
             else:
                 dx = np.random.randint(x.shape[1])
             x = np.roll(x, dx, axis=1)
-
         # Normalize image
         if self.img_mean is not None:
             x = x - self.img_mean
         if self.img_std is not None:
             x = x / self.img_std
-        '''
 
         return torch.FloatTensor(x.copy()), self.dataset[idx][1]
 
@@ -276,7 +264,7 @@ class CustomDataset(data.Dataset):
         return image, target
 
 class OmniCustom(OmniDataset):
-    def __init__(self, root = '/home/manuel/cv/trab-cv-final/animals/train', train=True,
+    def __init__(self, root = '/home/msnuel/trab-final-cv/animals/val', train=True,
                  download=True, *args, **kwargs):
         
         self.custom = CustomDataset(root_dir = root)
@@ -356,7 +344,7 @@ if __name__ == '__main__':
         path = os.path.join(args.out_dir, '%d.jpg' % idx)
         x, label = dataset[idx]
 
-        print(x.shape)
+        #print(x.shape)
 
-        print((x < -100).nonzero().flatten())
+        #print((x < -100).nonzero().flatten())
         Image.fromarray(x.numpy().astype(np.uint8)).save(path)

@@ -82,6 +82,10 @@ class SphereNet(nn.Module):
         #8 x 8 x 512 
         self.conv6 = SphereConv2D(512, 512, stride=1)
         self.pool6 = SphereMaxPool2D(stride=2)
+        #self.conv7 = SphereConv2D(1024, 2048, stride=1)
+        #self.pool7 = SphereMaxPool2D(stride=2)
+        #self.conv8 = SphereConv2D(2048, 2048, stride=1)
+        #self.pool8 = SphereMaxPool2D(stride=2)
 
         self.classifier = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.25), nn.Linear(4096, 4))
         self.bb = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.25), nn.Linear(4096, 4))
@@ -93,6 +97,8 @@ class SphereNet(nn.Module):
         x = F.relu(self.pool4(self.conv4(x)))
         x = F.relu(self.pool5(self.conv5(x)))
         x = F.relu(self.pool6(self.conv6(x)))
+        #x = F.relu(self.pool7(self.conv7(x)))
+        #x = F.relu(self.pool8(self.conv8(x)))
         #print(x.size())
         x = x.view(-1, 8192)  # flatten, [B, C, H, W) -> (B, C*H*W)
         
@@ -133,7 +139,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     train_loss = 0
     total_box_loss = 0
-    mean_iou =0
+    mean_iou = 0
     
     for batch_idx, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
@@ -150,7 +156,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
             mean_iou += get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})
         total_box_loss += box_loss
         
-        total_loss = box_loss + class_loss
+        total_loss = box_loss/10 + class_loss
         total_loss.backward()
         
         optimizer.step()
@@ -169,6 +175,8 @@ def train(args, model, device, train_loader, optimizer, epoch):
     print('\n Train Loss: ', train_loss)
     print('\n Mean IOU: ', mean_iou)
 
+    return train_loss
+
 
 def test(args, model, device, test_loader):
     model.eval()
@@ -176,6 +184,7 @@ def test(args, model, device, test_loader):
     correct = 0
     test_loss = 0
     total_box_loss = 0
+
     with torch.no_grad():
         for data, target in test_loader:
             #data, target = data.to(device), target.long().to(device)
@@ -188,13 +197,11 @@ def test(args, model, device, test_loader):
 
             class_loss = F.cross_entropy(y_pred, target["labels"].long().to(device))
 
-            #box_loss = F.mse_loss(z_pred, z)
-            box_loss = F.l1_loss(z_pred, z, reduction="none").sum(1)
-            box_loss = box_loss.sum()
+            box_loss = F.mse_loss(z_pred, z)
             
             total_box_loss += box_loss
         
-            total_loss = box_loss/1000 + class_loss
+            total_loss = box_loss + class_loss
             test_loss += total_loss.item()
 
             #test_loss += F.cross_entropy(output, target).item() # sum up batch loss
@@ -206,6 +213,8 @@ def test(args, model, device, test_loader):
     print('\nTest set: Average loss: {:.4f}, box loss {:.4f} Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, box_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
+    
+    return(test_loss)
 
 def main():
     # Training settings
@@ -216,7 +225,7 @@ def main():
                         help='input batch size for training')
     parser.add_argument('--test-batch-size', type=int, default=8, metavar='N',
                         help='input batch size for testing')
-    parser.add_argument('--epochs', type=int, default=50, metavar='N',
+    parser.add_argument('--epochs', type=int, default=20, metavar='N',
                         help='number of epochs to train')
     parser.add_argument('--optimizer', type=str, default='adam',
                         help='optimizer, options={"adam, sgd"}')
@@ -246,8 +255,8 @@ def main():
         train_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
         test_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
     if args.data == 'OmniCustom':
-        train_dataset = OmniCustom(root='/home/msnuel/trab-final-cv/animals/train', fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
-        test_dataset = OmniCustom(root='/home/msnuel/trab-final-cv/animals/val', fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
+        train_dataset = OmniCustom(root='/home/msnuel/trab-final-cv/animals_sph/train', fov=120, img_std=255, train=True)
+        test_dataset = OmniCustom(root='/home/msnuel/trab-final-cv/animals_sph/val', fov=120, img_std=255, train=False)
     elif args.data == 'MNIST':
         train_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=True)
         test_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=False, fix_aug=True)
@@ -264,22 +273,26 @@ def main():
     elif args.optimizer == 'sgd':
         sphere_optimizer = torch.optim.SGD(sphere_model.parameters(), lr=args.lr, momentum=args.momentum)
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    
+    loss_train=[]
+    loss_test=[]
 
     for epoch in range(1, args.epochs + 1):
         ## SphereCNN
         print('{} Sphere CNN {}'.format('='*10, '='*10))
-        train(args, sphere_model, device, train_loader, sphere_optimizer, epoch)
-        test(args, sphere_model, device, test_loader)
+        loss_train.append(train(args, sphere_model, device, train_loader, sphere_optimizer, epoch))
+        loss_test.append(test(args, sphere_model, device, test_loader))
         #if epoch % args.save_interval == 0:
         #    torch.save(sphere_model.state_dict(), 'sphere_model.pkl')
 
         # Conventional CNN
-        print('{} Conventional CNN {}'.format('='*10, '='*10))
-        train(args, model, device, train_loader, optimizer, epoch)
-        test(args, model, device, test_loader)
+        #print('{} Conventional CNN {}'.format('='*10, '='*10))
+        #train(args, model, device, train_loader, optimizer, epoch)
+        #test(args, model, device, test_loader)
         #if epoch % args.save_interval == 0:
         #    torch.save(model.state_dict(), 'model.pkl')
-
+    print(loss_train)
+    print(loss_test)
 
 if __name__ == '__main__':
     main()
