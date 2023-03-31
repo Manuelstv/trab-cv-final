@@ -18,7 +18,7 @@ import cv2
 from matplotlib import pyplot as plt 
 
 
-def genuv(h, w):
+def genuv(h, w, fov):
     u, v = np.meshgrid(np.arange(w), np.arange(h))
 
     u = (u + 0.5) * 2 * np.pi / w - np.pi
@@ -74,24 +74,15 @@ def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=0):
     invalid = (u < -u_fov / 2) | (u > u_fov / 2) |\
               (v < -v_fov / 2) | (v > v_fov / 2)
 
-    '''
-    if (u < -u_fov / 2):
-        x = 0
-    if (u > u_fov / 2):
-        x = 256
-    if (v < -v_fov / 2):
-        y = 0
-    if (v > v_fov / 2):
-        y =256
-    '''
-
     x[invalid] = -100
     y[invalid] = -100
+    print(x,y)
+
 
     return np.stack([y, x], axis=0)
 
 class OmniDataset(data.Dataset):
-    def __init__(self, dataset, fov=180, outshape=(256, 256),
+    def __init__(self, dataset, fov=120, outshape=(1024,1024),
                  flip=False, h_rotate=False, v_rotate=False,
                  img_mean=None, img_std=None, fix_aug=False):
         '''
@@ -124,9 +115,15 @@ class OmniDataset(data.Dataset):
 
     def __getitem__(self, idx):
         img = np.array(self.dataset[idx][0], np.float32)
+        img[1,1] = -1000
+        img[1,2] = -1000
+        img[1,3] = -1000
+        img[251, 242] = -1000
+
         h, w = img.shape[:2]
-        uv = genuv(*self.outshape)
         fov = self.fov * np.pi / 180
+        uv = genuv(*self.outshape, fov)
+        #fov = self.fov * np.pi / 180
 
         if self.v_rotate:
             if self.aug is not None:
@@ -136,23 +133,17 @@ class OmniDataset(data.Dataset):
             img_idx = uv2img_idx(uv, h, w, fov, fov, v_c)
         else:
             img_idx = uv2img_idx(uv, h, w, fov, fov, 0)
+            #print(img_idx.shape)
+            cv2.imwrite('teste.jpg', img_idx[1])
         
-        print(len(np.unique(img_idx[0])))
+        
         x = map_coordinates(img, img_idx, order=1)
-
-        #plt.imshow(img_idx[0])
-        #plt.show()
-        
-
-
-        #print(img_idx)
-        #print(img_idx.shape) 
 
         #print(map_coordinates(np.array([1,1]), img_idx, order=1))
         #asdsj = map_coordinates(np.array([[0.1, 0.2], [0.3, 0.4]]), np.array([[0.12, 0.2], [0.23, 0.4]]), order=1)
 
         # Random flip
-        if self.aug is not None:
+        '''if self.aug is not None:
             if self.aug[idx]['flip']:
                 x = np.flip(x, axis=1)
         elif self.flip and np.random.randint(2) == 0:
@@ -171,8 +162,7 @@ class OmniDataset(data.Dataset):
             x = x - self.img_mean
         if self.img_std is not None:
             x = x / self.img_std
-
-
+        '''
 
         return torch.FloatTensor(x.copy()), self.dataset[idx][1]
 
@@ -286,7 +276,7 @@ class CustomDataset(data.Dataset):
         return image, target
 
 class OmniCustom(OmniDataset):
-    def __init__(self, root = '/home/msnuel/trab-final-cv/animals/train', train=True,
+    def __init__(self, root = '/home/manuel/cv/trab-cv-final/animals/train', train=True,
                  download=True, *args, **kwargs):
         
         self.custom = CustomDataset(root_dir = root)
@@ -334,7 +324,7 @@ if __name__ == '__main__':
                         choices=['OmniMNIST', 'OmniFashionMNIST', 'OmniCustom'],
                         help='which dataset to use')
 
-    parser.add_argument('--fov', type=int, default=80,
+    parser.add_argument('--fov', type=int, default=120,
                         help='fov of the tangent plane')
     parser.add_argument('--flip', action='store_true',
                         help='whether to apply random flip')
@@ -366,5 +356,7 @@ if __name__ == '__main__':
         path = os.path.join(args.out_dir, '%d.jpg' % idx)
         x, label = dataset[idx]
 
-        print(path)
+        print(x.shape)
+
+        print((x < -100).nonzero().flatten())
         Image.fromarray(x.numpy().astype(np.uint8)).save(path)

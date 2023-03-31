@@ -37,7 +37,7 @@ def xyz2uv(xyz):
     return np.stack([u, v], axis=-1)
 
 
-def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=np.pi/90):
+def uv2img_idx(uv, h, w, u_fov, v_fov, v_c):
     assert 0 < u_fov and u_fov < np.pi
     assert 0 < v_fov and v_fov < np.pi
     assert -np.pi < v_c and v_c < np.pi
@@ -56,17 +56,19 @@ def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=np.pi/90):
 
     u = uv_rot[..., 0]
     v = uv_rot[..., 1]
-
+    
     x = np.tan(u)
     y = np.tan(v) / np.cos(u)
     x = x * w / (2 * np.tan(u_fov / 2)) + w / 2
     y = y * h / (2 * np.tan(v_fov / 2)) + h / 2
 
+    print(u,v)
+    print(x,y)
+
     invalid = (u < -u_fov / 2) | (u > u_fov / 2) |\
               (v < -v_fov / 2) | (v > v_fov / 2)
     x[invalid] = -100
     y[invalid] = -100
-    print (u)
 
     '''if (u[1] < -u_fov / 2):
         x = 0
@@ -82,10 +84,10 @@ def uv2img_idx(uv, h, w, u_fov, v_fov, v_c=np.pi/90):
 import shutil
 import os
 
-path = "/home/msnuel/trab-final-cv/animals/train"
+path = "/home/manuel/cv/trab-cv-final/animals/train"
 dirs = os.listdir( path )
 
-file = 'image_10.txt'
+file = 'image_1.txt'
 
 # This would print all the files and directories
 #for file in dirs:
@@ -94,21 +96,19 @@ with open(f'{path}/{file}') as f:
     print(file)
     labels, x_min, y_min, x_max, y_max = f.read().split()
 
-    u = np.array([int(float(x_min)*512), int(float(x_max)*512)])
-    v = np.array([int(float(y_min)*512), int(float(y_max)*512)])
+    u = np.array([int(float(x_min)*256), int(float(x_max)*256)])
+    v = np.array([int(float(y_min)*256), int(float(y_max)*256)])
 
     print(u,v)
-    
+    fov = 120 * np.pi / 180    
     #u, v = np.meshgrid(u, v)
-    u = (u + 0.5) * 2 * np.pi / 512 - np.pi
-    v = (v + 0.5) * np.pi / 512 - np.pi / 2
-
+    u = (u) * fov / 256 - fov/2
+    v = (v) * fov / 256 - fov/2
 
     uv = np.stack([u, v], axis=-1)
     print(uv)
 
-    fov = 120 * np.pi / 180
-    img_idx = uv2img_idx(uv, 512, 512, fov, fov)
+    img_idx = uv2img_idx(uv, 256, 256, fov, fov,0)
     #x = map_coordinates(img, img_idx, order=1)
     print(img_idx)
-    sys.exit(0)
+    #sys.exit(0)
