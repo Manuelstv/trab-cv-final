@@ -7,7 +7,7 @@ import glob
 import shutil
 from sklearn.model_selection import train_test_split
 
-DIR_PATH = '/home/msnuel/trab-final-cv/animais'
+DIR_PATH = '/home/msnuel/trab-final-cv/animais_sph'
 
 dir = os.listdir(DIR_PATH)
 
@@ -53,17 +53,17 @@ for n in range(0, k):
     #train_images, val_images, train_annotations, val_annotations = train_test_split(img_fold, annots_fold, test_size = 0.2, random_state = 1)
     val_images, test_images, val_annotations, test_annotations = train_test_split(img_fold, annots_fold, test_size = 0.5)
 
-    if not os.path.exists(f'{PATH}/cross_val/dataset_fold_{n}'):
-        os.makedirs(f'{PATH}/cross_val/dataset_fold_{n}')
-        os.makedirs(f'{PATH}/cross_val/dataset_fold_{n}/train')
-        os.makedirs(f'{PATH}/cross_val/dataset_fold_{n}/test')
-        os.makedirs(f'{PATH}/cross_val/dataset_fold_{n}/val')
+    if not os.path.exists(f'{PATH}/cross_val_sph/dataset_fold_{n}'):
+        os.makedirs(f'{PATH}/cross_val_sph/dataset_fold_{n}')
+        os.makedirs(f'{PATH}/cross_val_sph/dataset_fold_{n}/train')
+        os.makedirs(f'{PATH}/cross_val_sph/dataset_fold_{n}/test')
+        os.makedirs(f'{PATH}/cross_val_sph/dataset_fold_{n}/val')
 
     print(train_images)
     # copy the splits into their folders
-    copy_files_to_folder(train_images, f'{PATH}/cross_val/dataset_fold_{n}/train')
-    copy_files_to_folder(val_images, f'{PATH}/cross_val/dataset_fold_{n}/val')
-    copy_files_to_folder(test_images, f'{PATH}/cross_val/dataset_fold_{n}/test')
-    copy_files_to_folder(train_annotations, f'{PATH}/cross_val/dataset_fold_{n}/train')
-    copy_files_to_folder(val_annotations,  f'{PATH}/cross_val/dataset_fold_{n}/val')
-    copy_files_to_folder(test_annotations, f'{PATH}/cross_val/dataset_fold_{n}/test')
+    copy_files_to_folder(train_images, f'{PATH}/cross_val_sph/dataset_fold_{n}/train')
+    copy_files_to_folder(val_images, f'{PATH}/cross_val_sph/dataset_fold_{n}/val')
+    copy_files_to_folder(test_images, f'{PATH}/cross_val_sph/dataset_fold_{n}/test')
+    copy_files_to_folder(train_annotations, f'{PATH}/cross_val_sph/dataset_fold_{n}/train')
+    copy_files_to_folder(val_annotations,  f'{PATH}/cross_val_sph/dataset_fold_{n}/val')
+    copy_files_to_folder(test_annotations, f'{PATH}/cross_val_sph/dataset_fold_{n}/test')

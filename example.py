@@ -156,7 +156,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
         #    mean_iou += get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})
         total_box_loss += box_loss
         
-        total_loss = box_loss*0.1 + 0.9*class_loss
+        total_loss = box_loss*0.9 + class_loss*0.1
         total_loss.backward()
         
         optimizer.step()
@@ -171,8 +171,8 @@ def train(args, model, device, train_loader, optimizer, epoch):
     total_box_loss /=  len(train_loader.dataset)
     mean_iou /= len(train_loader.dataset)
     
-    #print('\n Total box Loss: ', total_box_loss.item())
-    #print('\n Train Loss: ', train_loss)
+    print('\n Total box Loss: ', total_box_loss.item())
+    print('\n Train Loss: ', train_loss)
     #print('\n Mean IOU: ', mean_iou)
 
     return train_loss
@@ -201,7 +201,7 @@ def test(args, model, device, test_loader):
             
             total_box_loss += box_loss
         
-            total_loss = box_loss*0.1 + class_loss*0.9
+            total_loss = box_loss*0.9 + class_loss*0.1
             test_loss += total_loss.item()
 
             pred = y_pred.max(1, keepdim=True)[1] # get the index of the max log-probability
@@ -265,9 +265,9 @@ def main():
             train_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
             test_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
         if args.data == 'OmniCustom':
-            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/train', fov=160, img_std=255, train=True)
-            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/val', fov=160, img_std=255, train=False)
-            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/test', fov=160, img_std=255, train=False)
+            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/train', fov=120, img_std=255, train=True)
+            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/val', fov=120, img_std=255, train=False)
+            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/test', fov=120, img_std=255, train=False)
         elif args.data == 'MNIST':
             train_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=True)
             test_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=False, fix_aug=True)
