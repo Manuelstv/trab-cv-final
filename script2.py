@@ -1,9 +1,9 @@
 import os
-path = "/home/msnuel/trab-final-cv/animais_sph"
+path = "/home/msnuel/trab-final-cv/cross_val_sph/dataset_fold_2/val"
 value = 0
 for file in os.listdir(path):
-    new_filename = f'{path}/imag_{value}.jpg'
-    new_filename2 = f'{path}/imag_{value}.txt'
+    new_filename = f'{path}/img_{value}.jpg'
+    new_filename2 = f'{path}/img_{value}.txt'
     #print(file)
     if file.endswith('jpg'):
         print(file)

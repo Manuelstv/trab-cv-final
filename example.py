@@ -87,8 +87,8 @@ class SphereNet(nn.Module):
         #self.conv8 = SphereConv2D(2048, 2048, stride=1)
         #self.pool8 = SphereMaxPool2D(stride=2)
 
-        self.classifier = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.25), nn.Linear(4096, 4))
-        self.bb = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.25), nn.Linear(4096, 4))
+        self.classifier = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.5), nn.Linear(4096, 4))
+        self.bb = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.5), nn.Linear(4096, 4))
 
     def forward(self, x):
         x = F.relu(self.pool1(self.conv1(x)))
@@ -117,8 +117,8 @@ class Net(nn.Module):
         self.conv5 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.conv6 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         #self.fc = nn.Linear(8192, 4096)
-        self.classifier = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.25), nn.Linear(4096, 4))
-        self.bb = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.25), nn.Linear(4096, 4))
+        self.classifier = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.5), nn.Linear(4096, 4))
+        self.bb = nn.Sequential(nn.Linear(8192, 4096), nn.Dropout(0.5), nn.Linear(4096, 4))
 
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
@@ -265,9 +265,9 @@ def main():
             train_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
             test_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
         if args.data == 'OmniCustom':
-            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/train', fov=120, img_std=255, train=True)
-            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/val', fov=120, img_std=255, train=False)
-            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/test', fov=120, img_std=255, train=False)
+            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/train', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
+            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/val', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
+            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/test', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
         elif args.data == 'MNIST':
             train_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=True)
             test_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=False, fix_aug=True)
@@ -287,7 +287,9 @@ def main():
             optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     
         loss_train=[]
+        loss_train_cnn=[]
         loss_test=[]
+        loss_test_cnn=[]
 
         for epoch in range(1, args.epochs + 1):
             ## SphereCNN
@@ -297,8 +299,8 @@ def main():
 
             # Conventional CNN
             print('{} Conventional CNN {}'.format('='*10, '='*10))
-            train(args, model, device, train_loader, optimizer, epoch)
-            test(args, model, device, test_loader)
+            loss_train_cnn.append(train(args, model, device, train_loader, optimizer, epoch))
+            loss_test_cnn.append(test(args, model, device, val_loader))
             #if epoch % args.save_interval == 0:
             #    torch.save(model.state_dict(), 'model.pkl')
     
@@ -306,6 +308,9 @@ def main():
         test(args, model, device, test_loader)
         print(loss_train)
         print(loss_test)
+        print(loss_train_cnn)
+        print(loss_test_cnn)
+
 
 if __name__ == '__main__':
     main()
