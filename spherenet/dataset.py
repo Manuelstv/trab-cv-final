@@ -178,7 +178,7 @@ class CustomDataset(data.Dataset):
 
         #img_name = os.path.join(self.root_dir,
         #                        self.landmarks_frame.iloc[idx, 0])
-        img_name = f'{self.root_dir}/image_{idx}.jpg'
+        img_name = f'{self.root_dir}/img_{idx}.jpg'
         #image = io.imread(img_name)
         image = Image.open(img_name).convert('L')
         #image.save(f'{self.root_dir}/oimundo/image_{idx}.jpg')
@@ -192,7 +192,7 @@ class CustomDataset(data.Dataset):
         #if self.transform:
         #    sample = self.transform(sample)
                 # capture the corresponding XML file for getting the annotations
-        annot_filename = f'{self.root_dir}/image_{idx}.txt'
+        annot_filename = f'{self.root_dir}/img_{idx}.txt'
         #annot_file_path = os.path.join(self.dir_path, annot_filename)
         
         #boxes = []
@@ -264,7 +264,7 @@ class CustomDataset(data.Dataset):
         return image, target
 
 class OmniCustom(OmniDataset):
-    def __init__(self, root = '/home/msnuel/trab-final-cv/animals/val', train=True,
+    def __init__(self, root = '/home/msnuel/trab-final-cv/animals/train', train=True,
                  download=True, *args, **kwargs):
         
         self.custom = CustomDataset(root_dir = root)

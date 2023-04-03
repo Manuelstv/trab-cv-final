@@ -152,28 +152,28 @@ def train(args, model, device, train_loader, optimizer, epoch):
 
         box_loss = F.mse_loss(z_pred, z)
 
-        for b in range(z.shape[0]):
-            mean_iou += get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})
+        #for b in range(z.shape[0]):
+        #    mean_iou += get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})
         total_box_loss += box_loss
         
-        total_loss = box_loss/10 + class_loss
+        total_loss = box_loss*0.1 + 0.9*class_loss
         total_loss.backward()
         
         optimizer.step()
         train_loss += total_loss.item()
         
-        if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} \t box loss {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), total_loss.item(), box_loss.item()))
+        #if batch_idx % args.log_interval == 0:
+        #    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} \t box loss {:.6f}'.format(
+        #        epoch, batch_idx * len(data), len(train_loader.dataset),
+        #        100. * batch_idx / len(train_loader), total_loss.item(), box_loss.item()))
      
     train_loss /= len(train_loader.dataset)
     total_box_loss /=  len(train_loader.dataset)
     mean_iou /= len(train_loader.dataset)
     
-    print('\n Total box Loss: ', total_box_loss.item())
-    print('\n Train Loss: ', train_loss)
-    print('\n Mean IOU: ', mean_iou)
+    #print('\n Total box Loss: ', total_box_loss.item())
+    #print('\n Train Loss: ', train_loss)
+    #print('\n Mean IOU: ', mean_iou)
 
     return train_loss
 
@@ -181,7 +181,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
 def test(args, model, device, test_loader):
     model.eval()
     total_loss = 0
-    correct = 0
+    correct_0, correct_3, correct_6 = 0, 0, 0
     test_loss = 0
     total_box_loss = 0
 
@@ -201,18 +201,27 @@ def test(args, model, device, test_loader):
             
             total_box_loss += box_loss
         
-            total_loss = box_loss + class_loss
+            total_loss = box_loss*0.1 + class_loss*0.9
             test_loss += total_loss.item()
 
-            #test_loss += F.cross_entropy(output, target).item() # sum up batch loss
             pred = y_pred.max(1, keepdim=True)[1] # get the index of the max log-probability
-            correct += pred.eq(target["labels"].long().to(device).view_as(pred)).sum().item()
+
+            for b in range(z.shape[0]):
+                if(get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})>0 and pred[b]==target["labels"][b]):
+                    correct_0 += 1
+                if(get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})>0.3 and pred[b]==target["labels"][b]):
+                    correct_3 += 1
+                if(get_iou({'x1': z[0][0], 'x2': z[0][2], 'y1': z[0][1], 'y2': z[0][3]}, {'x1': z_pred[0][0], 'x2': z_pred[0][2], 'y1': z_pred[0][1], 'y2': z_pred[0][3]})>0.6 and pred[b]==target["labels"][b]):
+                    correct_6 += 1
+
+            #correct += pred.eq(target["labels"].long().to(device).view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
     total_box_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, box loss {:.4f} Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, box_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    print(correct_0, correct_3, correct_6, len(test_loader.dataset))
+    #print('\nTest set: Average loss: {:.4f}, box loss {:.4f} Accuracy: {}/{} ({:.0f}%)\n'.format(
+    #    test_loss, box_loss, correct, len(test_loader.dataset),
+    #    100. * correct / len(test_loader.dataset)))
     
     return(test_loss)
 
@@ -225,7 +234,7 @@ def main():
                         help='input batch size for training')
     parser.add_argument('--test-batch-size', type=int, default=8, metavar='N',
                         help='input batch size for testing')
-    parser.add_argument('--epochs', type=int, default=20, metavar='N',
+    parser.add_argument('--epochs', type=int, default=30, metavar='N',
                         help='number of epochs to train')
     parser.add_argument('--optimizer', type=str, default='adam',
                         help='optimizer, options={"adam, sgd"}')
@@ -250,49 +259,53 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
 
-    np.random.seed(args.seed)
-    if args.data == 'FashionMNIST':
-        train_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
-        test_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
-    if args.data == 'OmniCustom':
-        train_dataset = OmniCustom(root='/home/msnuel/trab-final-cv/animals_sph/train', fov=120, img_std=255, train=True)
-        test_dataset = OmniCustom(root='/home/msnuel/trab-final-cv/animals_sph/val', fov=120, img_std=255, train=False)
-    elif args.data == 'MNIST':
-        train_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=True)
-        test_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=False, fix_aug=True)
+    for k in range(0, 3):
+        np.random.seed(args.seed)
+        if args.data == 'FashionMNIST':
+            train_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
+            test_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
+        if args.data == 'OmniCustom':
+            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/train', fov=160, img_std=255, train=True)
+            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/val', fov=160, img_std=255, train=False)
+            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/test', fov=160, img_std=255, train=False)
+        elif args.data == 'MNIST':
+            train_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=True)
+            test_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=False, fix_aug=True)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+        val_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
-    # Train
-    sphere_model = SphereNet().to(device)
-    model = Net().to(device)
-    if args.optimizer == 'adam':
-        sphere_optimizer = torch.optim.Adam(sphere_model.parameters(), lr=args.lr)
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    elif args.optimizer == 'sgd':
-        sphere_optimizer = torch.optim.SGD(sphere_model.parameters(), lr=args.lr, momentum=args.momentum)
-        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+        # Train
+        sphere_model = SphereNet().to(device)
+        model = Net().to(device)
+        if args.optimizer == 'adam':
+            sphere_optimizer = torch.optim.Adam(sphere_model.parameters(), lr=args.lr)
+            optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        elif args.optimizer == 'sgd':
+            sphere_optimizer = torch.optim.SGD(sphere_model.parameters(), lr=args.lr, momentum=args.momentum)
+            optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     
-    loss_train=[]
-    loss_test=[]
+        loss_train=[]
+        loss_test=[]
 
-    for epoch in range(1, args.epochs + 1):
-        ## SphereCNN
-        print('{} Sphere CNN {}'.format('='*10, '='*10))
-        loss_train.append(train(args, sphere_model, device, train_loader, sphere_optimizer, epoch))
-        loss_test.append(test(args, sphere_model, device, test_loader))
-        #if epoch % args.save_interval == 0:
-        #    torch.save(sphere_model.state_dict(), 'sphere_model.pkl')
+        for epoch in range(1, args.epochs + 1):
+            ## SphereCNN
+            print('{} Sphere CNN {}'.format('='*10, '='*10))
+            loss_train.append(train(args, sphere_model, device, train_loader, sphere_optimizer, epoch))
+            loss_test.append(test(args, sphere_model, device, val_loader))
 
-        # Conventional CNN
-        #print('{} Conventional CNN {}'.format('='*10, '='*10))
-        #train(args, model, device, train_loader, optimizer, epoch)
-        #test(args, model, device, test_loader)
-        #if epoch % args.save_interval == 0:
-        #    torch.save(model.state_dict(), 'model.pkl')
-    print(loss_train)
-    print(loss_test)
+            # Conventional CNN
+            print('{} Conventional CNN {}'.format('='*10, '='*10))
+            train(args, model, device, train_loader, optimizer, epoch)
+            test(args, model, device, test_loader)
+            #if epoch % args.save_interval == 0:
+            #    torch.save(model.state_dict(), 'model.pkl')
+    
+        test(args, sphere_model, device, test_loader)
+        test(args, model, device, test_loader)
+        print(loss_train)
+        print(loss_test)
 
 if __name__ == '__main__':
     main()
