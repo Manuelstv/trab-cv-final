@@ -259,15 +259,15 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
 
-    for k in range(0, 3):
+    for k in range(2, 3):
         np.random.seed(args.seed)
         if args.data == 'FashionMNIST':
             train_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
             test_dataset = OmniFashionMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
         if args.data == 'OmniCustom':
-            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/train', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
-            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/val', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
-            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val/dataset_fold_{k}/test', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
+            train_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val_sph/dataset_fold_{k}/train', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=True)
+            val_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val_sph/dataset_fold_{k}/val', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
+            test_dataset = OmniCustom(root=f'/home/msnuel/trab-final-cv/cross_val_sph/dataset_fold_{k}/test', fov=160, flip=True, h_rotate=True, v_rotate=True, img_std=255, train=False, fix_aug=True)
         elif args.data == 'MNIST':
             train_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=True)
             test_dataset = OmniMNIST(fov=120, flip=True, h_rotate=True, v_rotate=True, train=False, fix_aug=True)
